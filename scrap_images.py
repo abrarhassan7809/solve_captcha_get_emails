@@ -44,8 +44,7 @@ def find_gap_position(slider_image, background_image):
     slider_gray = cv2.cvtColor(np.array(slider_image), cv2.COLOR_BGR2GRAY)
     background_gray = cv2.cvtColor(np.array(background_image), cv2.COLOR_BGR2GRAY)
 
-    # Increase the number of features
-    orb = cv2.ORB_create(nfeatures=1000)
+    orb = cv2.ORB_create(nfeatures=2000)
     kp1, des1 = orb.detectAndCompute(slider_gray, None)
     kp2, des2 = orb.detectAndCompute(background_gray, None)
 
@@ -54,7 +53,7 @@ def find_gap_position(slider_image, background_image):
                         table_number=6,  # 12
                         key_size=12,  # 20
                         multi_probe_level=2)  # 2
-    search_params = dict(checks=50)  # Increase this to improve accuracy
+    search_params = dict(checks=100)  # Increase this to improve accuracy
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
     # Perform the matching with k=2
@@ -65,7 +64,7 @@ def find_gap_position(slider_image, background_image):
     for match in matches:
         if len(match) == 2:
             m, n = match
-            if m.distance < 0.75 * n.distance:
+            if m.distance < 0.7 * n.distance:
                 good_matches.append(m)
 
     if len(good_matches) == 0:
@@ -78,7 +77,8 @@ def find_gap_position(slider_image, background_image):
     save_image(Image.fromarray(img_matches), "captcha_images", "flann_matches.png")
 
     # Calculate the average position of the best matches
-    gap_position = np.mean([kp1[m.queryIdx].pt[0] for m in good_matches])
+    gap_positions = [kp1[m.queryIdx].pt[0] for m in good_matches]
+    gap_position = np.mean(gap_positions)
     print('Number of good matches:', len(good_matches), 'Gap position:', gap_position)
     return int(gap_position)
 
@@ -164,6 +164,7 @@ def solve_slider_captcha(driver):
 # Usage example
 if __name__ == "__main__":
     options = Options()
+    options.add_argument("--incognito")
     options.add_argument("--start-maximized")
     options.add_argument("--disable-notifications")
     options.add_argument("--use_subprocess")
